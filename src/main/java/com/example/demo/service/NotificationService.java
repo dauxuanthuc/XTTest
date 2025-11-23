@@ -19,8 +19,8 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
-    // emitter per username
-    private final Map<String, SseEmitter> emitters = new ConcurrentHashMap<>();
+    // emitters per username (support multiple tabs/clients)
+    private final Map<String, java.util.concurrent.CopyOnWriteArrayList<SseEmitter>> emitters = new ConcurrentHashMap<>();
 
     public NotificationService(NotificationRepository notificationRepository, UserRepository userRepository) {
         this.notificationRepository = notificationRepository;
@@ -30,18 +30,23 @@ public class NotificationService {
     public Notification createNotificationForUser(User user, String message) {
         Notification n = new Notification(user, message);
         Notification saved = notificationRepository.save(n);
-        // publish to SSE subscriber if present
+        // publish to all SSE subscribers for this user (if any)
         String username = user != null ? user.getUsername() : null;
         if (username != null) {
-            SseEmitter emitter = emitters.get(username);
-            if (emitter != null) {
-                try {
-                    NotificationDTO dto = new NotificationDTO(saved.getId(), saved.getMessage(), saved.getCreatedAt(), saved.getIsRead());
-                    emitter.send(SseEmitter.event().name("notification").data(dto));
-                } catch (IOException e) {
-                    // remove emitter on error
+            java.util.concurrent.CopyOnWriteArrayList<SseEmitter> list = emitters.get(username);
+            if (list != null) {
+                NotificationDTO dto = new NotificationDTO(saved.getId(), saved.getMessage(), saved.getCreatedAt(), saved.getIsRead());
+                for (SseEmitter emitter : list) {
+                    try {
+                        emitter.send(SseEmitter.event().name("notification").data(dto));
+                    } catch (IOException e) {
+                        // remove broken emitter
+                        list.remove(emitter);
+                        try { emitter.completeWithError(e); } catch (Exception ex) { }
+                    }
+                }
+                if (list.isEmpty()) {
                     emitters.remove(username);
-                    try { emitter.completeWithError(e); } catch (Exception ex) { }
                 }
             }
         }
@@ -55,10 +60,44 @@ public class NotificationService {
 
     public SseEmitter createEmitterForUser(String username) {
         SseEmitter emitter = new SseEmitter(0L); // no timeout
-        emitters.put(username, emitter);
-        emitter.onCompletion(() -> emitters.remove(username));
-        emitter.onTimeout(() -> emitters.remove(username));
+        java.util.concurrent.CopyOnWriteArrayList<SseEmitter> list = emitters.computeIfAbsent(username, k -> new java.util.concurrent.CopyOnWriteArrayList<>());
+        list.add(emitter);
+
+        emitter.onCompletion(() -> {
+            list.remove(emitter);
+            if (list.isEmpty()) emitters.remove(username);
+        });
+        emitter.onTimeout(() -> {
+            list.remove(emitter);
+            if (list.isEmpty()) emitters.remove(username);
+            try { emitter.complete(); } catch (Exception ex) {}
+        });
+        emitter.onError((ex) -> {
+            list.remove(emitter);
+            if (list.isEmpty()) emitters.remove(username);
+            try { emitter.completeWithError(ex); } catch (Exception e) {}
+        });
+
         return emitter;
+    }
+
+    // Heartbeat to keep connections alive and detect stale clients
+    @org.springframework.scheduling.annotation.Scheduled(fixedRate = 15000)
+    public void sendHeartbeats() {
+        if (emitters.isEmpty()) return;
+        for (String username : emitters.keySet()) {
+            java.util.concurrent.CopyOnWriteArrayList<SseEmitter> list = emitters.get(username);
+            if (list == null) continue;
+            for (SseEmitter emitter : list) {
+                try {
+                    emitter.send(SseEmitter.event().name("heartbeat").data("ping"));
+                } catch (IOException e) {
+                    list.remove(emitter);
+                    try { emitter.completeWithError(e); } catch (Exception ex) {}
+                }
+            }
+            if (list.isEmpty()) emitters.remove(username);
+        }
     }
 
     public List<Notification> getAdminsAndCreateDailyNote(String message) {
