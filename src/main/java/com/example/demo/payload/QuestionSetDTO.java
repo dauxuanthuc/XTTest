@@ -6,6 +6,7 @@ public class QuestionSetDTO {
     private Long id;
     private String title;
     private String description;
+    private String subject;
     private Integer questionCount;
     private String fileType;
     private String createdBy;
@@ -19,12 +20,13 @@ public class QuestionSetDTO {
 
     public QuestionSetDTO() {}
 
-    public QuestionSetDTO(Long id, String title, String description, Integer questionCount,
+    public QuestionSetDTO(Long id, String title, String description, String subject, Integer questionCount,
                           String fileType, String createdBy, LocalDateTime createdAt, LocalDateTime updatedAt,
                           String visibility, Boolean isExamScoped) {
         this.id = id;
         this.title = title;
         this.description = description;
+        this.subject = subject;
         this.questionCount = questionCount;
         this.fileType = fileType;
         this.createdBy = createdBy;
@@ -45,6 +47,9 @@ public class QuestionSetDTO {
 
     public Integer getQuestionCount() { return questionCount; }
     public void setQuestionCount(Integer questionCount) { this.questionCount = questionCount; }
+
+    public String getSubject() { return subject; }
+    public void setSubject(String subject) { this.subject = subject; }
 
     public String getFileType() { return fileType; }
     public void setFileType(String fileType) { this.fileType = fileType; }

@@ -16,6 +16,8 @@ public class QuestionSet {
 
     private String description;
 
+    private String subject; // e.g., 'Đại cương', 'Chuyên ngành'
+
     @Column(name = "file_path")
     private String filePath;
 
@@ -54,6 +56,9 @@ public class QuestionSet {
 
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
+
+    public String getSubject() { return subject; }
+    public void setSubject(String subject) { this.subject = subject; }
 
     public String getFilePath() { return filePath; }
     public void setFilePath(String filePath) { this.filePath = filePath; }

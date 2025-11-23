@@ -35,11 +35,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         String header = request.getHeader(HttpHeaders.AUTHORIZATION);
-        if (header == null) {
-            logger.debug("JwtAuthenticationFilter: no Authorization header present for request {}", request.getRequestURI());
-        }
+        String token = null;
         if (header != null && header.startsWith("Bearer ")) {
-            String token = header.substring(7);
+            token = header.substring(7);
+        } else {
+            // allow token via query parameter for EventSource or other clients that cannot set headers
+            String tokenParam = request.getParameter("token");
+            if (tokenParam != null && !tokenParam.isEmpty()) {
+                token = tokenParam;
+            } else {
+                logger.debug("JwtAuthenticationFilter: no Authorization header or token param for request {}", request.getRequestURI());
+            }
+        }
+
+        if (token != null) {
             if (jwtUtil.validateToken(token)) {
                 String username = jwtUtil.getUsernameFromToken(token);
                 logger.debug("JwtAuthenticationFilter: token valid for username={}", username);

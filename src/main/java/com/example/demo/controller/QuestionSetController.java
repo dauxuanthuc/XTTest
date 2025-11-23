@@ -82,6 +82,7 @@ public class QuestionSetController {
             
             // Allow optional visibility and examScoped flags
             String visibility = request.get("visibility");
+            String subject = request.get("subject");
             Boolean isExamScoped = false;
             if (request.get("isExamScoped") != null) {
                 isExamScoped = Boolean.valueOf(request.get("isExamScoped"));
@@ -89,6 +90,7 @@ public class QuestionSetController {
             if (visibility == null || visibility.isEmpty()) visibility = "CLASS"; // default: class-only
 
             QuestionSet questionSet = questionSetService.createQuestionSet(title, description, currentUser.getId());
+            if (subject != null) questionSet.setSubject(subject);
             questionSet.setVisibility(visibility);
             questionSet.setIsExamScoped(isExamScoped);
             questionSet = questionSetService.saveQuestionSet(questionSet);
@@ -112,10 +114,12 @@ public class QuestionSetController {
             // Update visibility and isExamScoped if provided
             String visibility = request.get("visibility");
             String isExamScopedStr = request.get("isExamScoped");
+            String subject = request.get("subject");
             
             if (visibility != null && !visibility.isEmpty()) {
                 questionSet.setVisibility(visibility);
             }
+            if (subject != null) questionSet.setSubject(subject);
             if (isExamScopedStr != null) {
                 questionSet.setIsExamScoped(Boolean.parseBoolean(isExamScopedStr));
             }
@@ -271,6 +275,7 @@ public class QuestionSetController {
                 questionSet.getId(),
                 questionSet.getTitle(),
                 questionSet.getDescription(),
+                questionSet.getSubject(),
                 questionSet.getQuestionCount(),
                 questionSet.getFileType(),
                 questionSet.getCreatedBy().getUsername(),

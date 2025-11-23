@@ -97,6 +97,7 @@ public class StudentController {
                 questionSet.getId(),
                 questionSet.getTitle(),
                 questionSet.getDescription(),
+                questionSet.getSubject(),
                 questionSet.getQuestionCount(),
                 questionSet.getFileType(),
                 questionSet.getCreatedBy().getUsername(),

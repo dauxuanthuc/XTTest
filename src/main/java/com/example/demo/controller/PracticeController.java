@@ -32,9 +32,12 @@ public class PracticeController {
      * Lấy danh sách bộ đề PUBLIC để ôn bài (không cần đăng nhập)
      */
     @GetMapping("/question-sets")
-    public ResponseEntity<?> getPublicQuestionSets() {
+    public ResponseEntity<?> getPublicQuestionSets(@RequestParam(required = false) String subject) {
         try {
             List<QuestionSet> sets = studentService.getPublicQuestionSets();
+            if (subject != null && !subject.isBlank()) {
+                sets = sets.stream().filter(s -> subject.equals(s.getSubject())).collect(Collectors.toList());
+            }
             List<QuestionSetDTO> dtos = sets.stream()
                     .map(this::convertToDTO)
                     .collect(Collectors.toList());
@@ -65,6 +68,7 @@ public class PracticeController {
                 questionSet.getId(),
                 questionSet.getTitle(),
                 questionSet.getDescription(),
+                questionSet.getSubject(),
                 questionSet.getQuestionCount(),
                 questionSet.getFileType(),
                 questionSet.getCreatedBy().getUsername(),
