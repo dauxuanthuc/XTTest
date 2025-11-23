@@ -18,6 +18,31 @@ import java.util.stream.Collectors;
 
 @Service
 public class StudentService {
+    // Trả về các bộ đề PUBLIC, không phải exam-scoped
+    private final QuestionSetRepository questionSetRepository;
+
+    public StudentService(ExamRepository examRepository, QuestionRepository questionRepository,
+                          UserRepository userRepository, EnrollmentRepository enrollmentRepository,
+                          ExamResultRepository examResultRepository,
+                          QuestionSetRepository questionSetRepository) {
+        this.examRepository = examRepository;
+        this.questionRepository = questionRepository;
+        this.userRepository = userRepository;
+        this.enrollmentRepository = enrollmentRepository;
+        this.examResultRepository = examResultRepository;
+        this.questionSetRepository = questionSetRepository;
+    }
+
+    public List<QuestionSet> getPublicQuestionSets() {
+        List<QuestionSet> allSets = questionSetRepository.findAll();
+        List<QuestionSet> publicSets = new ArrayList<>();
+        for (QuestionSet set : allSets) {
+            if ("PUBLIC".equals(set.getVisibility()) && !Boolean.TRUE.equals(set.getIsExamScoped())) {
+                publicSets.add(set);
+            }
+        }
+        return publicSets;
+    }
 
     private final ExamRepository examRepository;
     private final QuestionRepository questionRepository;
@@ -25,15 +50,7 @@ public class StudentService {
     private final EnrollmentRepository enrollmentRepository;
     private final ExamResultRepository examResultRepository;
 
-    public StudentService(ExamRepository examRepository, QuestionRepository questionRepository,
-                          UserRepository userRepository, EnrollmentRepository enrollmentRepository,
-                          ExamResultRepository examResultRepository) {
-        this.examRepository = examRepository;
-        this.questionRepository = questionRepository;
-        this.userRepository = userRepository;
-        this.enrollmentRepository = enrollmentRepository;
-        this.examResultRepository = examResultRepository;
-    }
+    // Removed duplicate constructor to ensure all final fields are initialized
 
     public Map<String, Object> startExamByAccessCode(String accessCode, String username) {
         Exam exam = examRepository.findByAccessCode(accessCode);

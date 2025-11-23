@@ -30,33 +30,40 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .cors().and()
-                .csrf().disable()
-                .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                .and()
-                .authorizeHttpRequests()
-                // allow preflight requests
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                // development convenience: allow public GET for teacher classes endpoint
-                .requestMatchers(HttpMethod.GET, "/api/teacher/classes").permitAll()
-                // allow error endpoint to be accessed anonymously so exceptions don't become 403
-                .requestMatchers("/error").permitAll()
-                // allow submissions while diagnosing auth issues
-                .requestMatchers(HttpMethod.POST, "/api/student/exams/submit").permitAll()
-                .requestMatchers("/api/auth/**", "/h2-console/**").permitAll()
-                // Allow public GET on question sets (for listing)
-                .requestMatchers(HttpMethod.GET, "/api/question-sets/**").permitAll()
-                .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                .requestMatchers("/api/student/**").hasRole("USER")
-                .requestMatchers("/api/teacher/**").hasRole("TEACHER")
-                .requestMatchers("/api/user/**").hasAnyRole("USER","TEACHER","ADMIN")
-                // POST, PUT, DELETE on question sets require authentication
-                .requestMatchers(HttpMethod.POST, "/api/question-sets/**").authenticated()
-                .requestMatchers(HttpMethod.PUT, "/api/question-sets/**").authenticated()
-                .requestMatchers(HttpMethod.DELETE, "/api/question-sets/**").authenticated()
-                .anyRequest().authenticated()
-                .and()
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+            .cors().and()
+            .csrf().disable()
+            .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+            .and()
+            .authorizeHttpRequests()
+            // allow preflight requests
+            .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+            // allow error endpoint
+            .requestMatchers("/error").permitAll()
+            // PUBLIC access
+            .requestMatchers("/api/auth/**", "/h2-console/**").permitAll()
+            // Ôn bài PUBLIC - practice endpoint không cần đăng nhập
+            .requestMatchers("/api/practice/**").permitAll()
+            .requestMatchers(HttpMethod.GET, "/api/question-sets/**").permitAll()
+            // Admin routes
+            .requestMatchers("/api/admin/**").hasRole("ADMIN")
+            // Teacher routes
+            .requestMatchers("/api/teacher/**").hasRole("TEACHER")
+            // User general routes
+            .requestMatchers("/api/user/**").hasAnyRole("USER","TEACHER","ADMIN")
+            // POST, PUT, DELETE on question sets require authentication
+            .requestMatchers(HttpMethod.POST, "/api/question-sets/**").authenticated()
+            .requestMatchers(HttpMethod.PUT, "/api/question-sets/**").authenticated()
+            .requestMatchers(HttpMethod.DELETE, "/api/question-sets/**").authenticated()
+            // Remaining student routes require USER role (all POST/PUT/DELETE)
+            .requestMatchers(HttpMethod.POST, "/api/student/**").hasRole("USER")
+            .requestMatchers(HttpMethod.PUT, "/api/student/**").hasRole("USER")
+            .requestMatchers(HttpMethod.DELETE, "/api/student/**").hasRole("USER")
+            // Other GET requests on /api/student (except /question-sets which is already permitAll)
+            .requestMatchers(HttpMethod.GET, "/api/student/exams/**").hasRole("USER")
+            .requestMatchers(HttpMethod.GET, "/api/student/results/**").hasRole("USER")
+            .anyRequest().authenticated()
+            .and()
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         // allow H2 console frames
         http.headers().frameOptions().disable();

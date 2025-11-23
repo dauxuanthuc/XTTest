@@ -34,12 +34,14 @@ public class StudentController {
     @GetMapping("/question-sets")
     public ResponseEntity<?> getVisibleQuestionSets() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String username = auth == null ? null : auth.getName();
-        if (username == null || "anonymousUser".equals(username)) {
-            return ResponseEntity.status(401).body(Map.of("message", "Not authenticated"));
+        String username = auth == null || "anonymousUser".equals(auth.getName()) ? null : auth.getName();
+        // Nếu chưa đăng nhập thì trả về các bộ đề PUBLIC, nếu đăng nhập thì lọc theo logic cũ
+        List<QuestionSet> sets;
+        if (username == null) {
+            sets = studentService.getPublicQuestionSets();
+        } else {
+            sets = studentService.getVisibleQuestionSets(username);
         }
-
-        List<QuestionSet> sets = studentService.getVisibleQuestionSets(username);
         List<QuestionSetDTO> dtos = sets.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
